@@ -1,25 +1,62 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
+import useApi from "./hooks/useApi";
 
 import Search from "./components/Search/Search";
 import Card from "./components/Card/Card";
 
 function App() {
-    let [fetchedData, updateFetchedData] = useState([]);
-    let { photos } = fetchedData;
-    let [pageNumber, updatePageNumber] = useState(1);
-    let [search, setSearch] = useState('girls');
-    let api = `https://api.unsplash.com/search/?client_id=tuL8C9ksQ7vXPp-J0r3JW6i0jpBq_jkDy0GtdnUoUR8&page=${pageNumber}&query=${search}`
+    const api = `https://api.unsplash.com/search/?client_id=tuL8C9ksQ7vXPp-J0r3JW6i0jpBq_jkDy0GtdnUoUR8`;
+    const [pageNumber, updatePageNumber] = useState(1);
+    const [search, setSearch] = useState('girls');
+
+    const [apiUrl, setApi] = useState(`${api}&page=1&query=girls`);
+    const [{ data, isLoading }, setUrl] = useApi(apiUrl, {});
+
+    const { photos:{results} = [] } = data;
+    const [ images, setImages] = useState(data);
+
+    const observer = useRef();
+    const lastItemRef = useRef();
+
+    const incrementPage = () =>
+    {
+        updatePageNumber(pageNumber + 1);
+        setUrl(`${api}&page=${pageNumber}&query=${search}`);
+    };
 
     useEffect(() => {
-        (async function () {
-            let data = await fetch(api).then((res) => res.json());
-            updateFetchedData(data);
-        })();
-    }, [api]);
+        const callback = (entries) => {
+            if (entries[0].isIntersecting) {
+                incrementPage();
+            }
+        };
 
-    //console.log(photos);
+        observer.current = new IntersectionObserver(callback);
+        observer.current.observe(lastItemRef.current);
+
+        return () => {
+            observer.current.disconnect();
+        };
+    }, [data]);
+
+    useEffect(() => {
+        if (!isLoading)
+        {
+            setImages((images) => {
+                console.log(images);
+                return images.length ? [...images, ...results] : [...results];
+            });
+        }
+    }, [data]);
+
+    useEffect(() => {
+        setImages([]);
+        setSearch(search);
+        setUrl(`${api}&page=${pageNumber}&query=${search}`);
+    }, [search]);
 
     return (
       <div className="App">
@@ -29,7 +66,8 @@ function App() {
               <div className="row">
                   <div className="col-lg-12 col-12">
                       <div className="row">
-                          <Card results={photos} />
+                          <Card images={images} />
+                          <div style={{height: 30 + 'px'}} ref={lastItemRef}></div>
                       </div>
                   </div>
               </div>

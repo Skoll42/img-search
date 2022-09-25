@@ -13,6 +13,7 @@ const Search = ({ setSearch, updatePageNumber }) => {
                 onChange={(e) => {
                     updatePageNumber(1);
                     setSearch(e.target.value);
+
                 }}
                 placeholder="Search for images"
                 className={styles.input}
